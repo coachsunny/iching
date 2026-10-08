@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>周易占筮與研習記事系統</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo-area">
+        <span class="logo-icon">☯</span>
+        <div>
+          <h1 class="logo-title">易經占筮與研習記事</h1>
+          <p class="logo-subtitle">觀變於陰陽而立卦 · 發揮於剛柔而生爻</p>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <nav class="nav-tabs">
+          <button class="nav-btn active" data-tab="tab-cast">
+            <span>🪙</span> 占卜起卦
+          </button>
+          <button class="nav-btn" data-tab="tab-record">
+            <span>📜</span> 占卦成果紀錄
+          </button>
+          <button class="nav-btn" data-tab="tab-history">
+            <span>📚</span> 歷史紀錄匣 <span class="badge" id="history-count">0</span>
+          </button>
+          <button class="nav-btn" data-tab="tab-encyclopedia">
+            <span>🔍</span> 六十四卦典
+          </button>
+        </nav>
+
+        <button id="btn-new-divination-header" class="btn btn-outline-red" title="清空舊資料，開啟新的一卦" style="padding: 0.5rem 1rem; font-size: 0.92rem; font-weight: 700;">
+          <span>✨</span> 開新占卦
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="main-layout">
+
+    <!-- ====================================================================
+         TAB 1: 占卜起卦
+         ==================================================================== -->
+    <section id="tab-cast" class="view-section active">
+      
+      <!-- 問卜基本信息輸入 -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h2 class="card-title" style="margin-bottom: 0; border: none; padding: 0;">
+            <span class="icon">✍️</span> 占卦基本信息
+          </h2>
+          <button id="btn-new-divination-form" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.35rem 0.8rem;">
+            <span>✨</span> 清空重置 (開新卦)
+          </button>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label">
+              <span>1. 占卜日期</span> <span class="req">*</span>
+            </label>
+            <input type="datetime-local" id="input-date" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <span>3. 占卜者 (問卦人)</span> <span class="req">*</span>
+            </label>
+            <input type="text" id="input-querent" class="form-input" placeholder="請輸入姓名或稱呼，如：自己、王先生" value="本人">
+          </div>
+          <div class="form-group" style="grid-column: span 1;">
+            <label class="form-label">
+              <span>2. 占卜主題 (所問何事)</span> <span class="req">*</span>
+            </label>
+            <input type="text" id="input-topic" class="form-input" placeholder="心誠則靈，請寫下明確所問之事...">
+            <div class="quick-topics">
+              <span class="tag-btn" onclick="setTopic('事業前景與工作決策')">事業求職</span>
+              <span class="tag-btn" onclick="setTopic('投資合作與財務評估')">財運投資</span>
+              <span class="tag-btn" onclick="setTopic('感情緣分與婚姻相處')">情感婚姻</span>
+              <span class="tag-btn" onclick="setTopic('身體健康與平安調養')">健康平安</span>
+              <span class="tag-btn" onclick="setTopic('學業考試與進修方向')">學業進修</span>
+              <span class="tag-btn" onclick="setTopic('搬遷出行與遠行吉凶')">出行安居</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 起卦方式切換區 -->
+      <div class="card">
+        <h2 class="card-title"><span class="icon">🪙</span> 選擇起卦方式</h2>
+        
+        <div class="method-tabs">
+          <button class="method-btn active" data-method="method-coins">① 三枚銅錢法 (推薦·傳統金錢起卦)</button>
+          <button class="method-btn" data-method="method-manual">② 實體銅錢/蓍草 自行輸入爻值</button>
+          <button class="method-btn" data-method="method-select">③ 直接指定本卦與動爻</button>
+          <button class="method-btn" data-method="method-numbers">④ 梅花易數 (報數起卦)</button>
+        </div>
+
+        <!-- 方式一：三枚銅錢隨機擲卦 -->
+        <div id="method-coins" class="method-content active">
+          <div class="coin-stage">
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+              每次擲出三枚銅錢（正面字為陽 3，背面花為陰 2）：<br>
+              3+3+3 = <strong>9 (老陽，陽動○)</strong> ｜ 2+2+2 = <strong>6 (老陰，陰動✕)</strong> ｜ 
+              3+2+2 = <strong>7 (少陽，陽靜)</strong> ｜ 3+3+2 = <strong>8 (少陰，陰靜)</strong>
+            </p>
+
+            <div class="coins-display">
+              <div class="ancient-coin" id="coin-1">
+                <div class="coin-hole"></div>
+                <span class="coin-label yang">乾</span>
+                <span class="coin-label yin">道</span>
+                <span class="coin-status">正(3)</span>
+              </div>
+              <div class="ancient-coin" id="coin-2">
+                <div class="coin-hole"></div>
+                <span class="coin-label yang">坤</span>
+                <span class="coin-label yin">德</span>
+                <span class="coin-status">正(3)</span>
+              </div>
+              <div class="ancient-coin" id="coin-3">
+                <div class="coin-hole"></div>
+                <span class="coin-label yang">易</span>
+                <span class="coin-label yin">理</span>
+                <span class="coin-status">反(2)</span>
+              </div>
+            </div>
+
+            <div id="toss-current-prompt" style="font-weight: 700; color: var(--c-ink); margin-bottom: 0.8rem; font-size: 1.1rem;">
+              請擲「初爻」（第 1 爻）
+            </div>
+
+            <div class="toss-controls">
+              <button id="btn-toss-single" class="btn btn-primary btn-large">
+                <span>🎲</span> 投擲當前爻
+              </button>
+              <button id="btn-toss-all" class="btn btn-secondary">
+                <span>⚡</span> 一鍵起出六爻
+              </button>
+              <button id="btn-reset-toss" class="btn btn-secondary">
+                <span>🔄</span> 重新擲這卦
+              </button>
+            </div>
+          </div>
+
+          <!-- 六爻累計建構條 (初爻在下，上爻在上) -->
+          <div class="lines-track" id="coin-lines-track">
+            <!-- Dynamically populated 6 lines -->
+          </div>
+        </div>
+
+        <!-- 方式二：手動輸入爻值 -->
+        <div id="method-manual" class="method-content">
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">
+            若您使用實體銅錢、蓍草或米卦已起出六爻，請直接點選各爻數值（自下而上：初爻至上爻）：
+          </p>
+          <table class="manual-table">
+            <tbody>
+              <!-- 上爻 (第6爻) -->
+              <tr>
+                <td style="font-weight: 700; color: var(--c-ink); width: 80px;">上爻 (第6爻)</td>
+                <td>
+                  <div class="manual-opt-group" data-pos="6">
+                    <button class="opt-btn" data-val="9">9 老陽(動)</button>
+                    <button class="opt-btn active" data-val="7">7 少陽(靜)</button>
+                    <button class="opt-btn" data-val="8">8 少陰(靜)</button>
+                    <button class="opt-btn" data-val="6">6 老陰(動)</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- 五爻 (第5爻) -->
+              <tr>
+                <td style="font-weight: 700; color: var(--c-ink);">五爻 (第5爻)</td>
+                <td>
+                  <div class="manual-opt-group" data-pos="5">
+                    <button class="opt-btn" data-val="9">9 老陽(動)</button>
+                    <button class="opt-btn active" data-val="7">7 少陽(靜)</button>
+                    <button class="opt-btn" data-val="8">8 少陰(靜)</button>
+                    <button class="opt-btn" data-val="6">6 老陰(動)</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- 四爻 (第4爻) -->
+              <tr>
+                <td style="font-weight: 700; color: var(--c-ink);">四爻 (第4爻)</td>
+                <td>
+                  <div class="manual-opt-group" data-pos="4">
+                    <button class="opt-btn" data-val="9">9 老陽(動)</button>
+                    <button class="opt-btn active" data-val="7">7 少陽(靜)</button>
+                    <button class="opt-btn" data-val="8">8 少陰(靜)</button>
+                    <button class="opt-btn" data-val="6">6 老陰(動)</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- 三爻 (第3爻) -->
+              <tr>
+                <td style="font-weight: 700; color: var(--c-ink);">三爻 (第3爻)</td>
+                <td>
+                  <div class="manual-opt-group" data-pos="3">
+                    <button class="opt-btn" data-val="9">9 老陽(動)</button>
+                    <button class="opt-btn active" data-val="7">7 少陽(靜)</button>
+                    <button class="opt-btn" data-val="8">8 少陰(靜)</button>
+                    <button class="opt-btn" data-val="6">6 老陰(動)</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- 二爻 (第2爻) -->
+              <tr>
+                <td style="font-weight: 700; color: var(--c-ink);">二爻 (第2爻)</td>
+                <td>
+                  <div class="manual-opt-group" data-pos="2">
+                    <button class="opt-btn" data-val="9">9 老陽(動)</button>
+                    <button class="opt-btn active" data-val="7">7 少陽(靜)</button>
+                    <button class="opt-btn" data-val="8">8 少陰(靜)</button>
+                    <button class="opt-btn" data-val="6">6 老陰(動)</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- 初爻 (第1爻) -->
+              <tr>
+                <td style="font-weight: 700; color: var(--c-ink);">初爻 (第1爻)</td>
+                <td>
+                  <div class="manual-opt-group" data-pos="1">
+                    <button class="opt-btn" data-val="9">9 老陽(動)</button>
+                    <button class="opt-btn active" data-val="7">7 少陽(靜)</button>
+                    <button class="opt-btn" data-val="8">8 少陰(靜)</button>
+                    <button class="opt-btn" data-val="6">6 老陰(動)</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="text-align: center; margin-top: 1.25rem;">
+            <button id="btn-apply-manual" class="btn btn-primary">
+              <span>🔮</span> 確認套用手動卦象
+            </button>
+          </div>
+        </div>
+
+        <!-- 方式三：直接指定本卦與動爻 -->
+        <div id="method-select" class="method-content">
+          <div style="max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">選擇本卦</label>
+              <select id="select-hexagram" class="form-select">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">勾選變動之爻 (動爻)</label>
+              <div id="select-moving-checkboxes" style="display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.5rem 0;">
+                <label><input type="checkbox" value="1"> 初爻</label>
+                <label><input type="checkbox" value="2"> 二爻</label>
+                <label><input type="checkbox" value="3"> 三爻</label>
+                <label><input type="checkbox" value="4"> 四爻</label>
+                <label><input type="checkbox" value="5"> 五爻</label>
+                <label><input type="checkbox" value="6"> 上爻</label>
+              </div>
+            </div>
+            <button id="btn-apply-select" class="btn btn-primary">
+              <span>🔮</span> 確定指定卦象
+            </button>
+          </div>
+        </div>
+
+        <!-- 方式四：梅花易數 (報數起卦) -->
+        <div id="method-numbers" class="method-content">
+          <div style="max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
+            <p style="font-size: 0.9rem; color: var(--text-muted);">
+              報三個正整數：第1數求上卦（÷8取餘），第2數求下卦（÷8取餘），第3數求動爻（÷6取餘）。
+            </p>
+            <div style="display: flex; gap: 0.8rem;">
+              <input type="number" id="num-1" class="form-input" placeholder="上卦數 (例: 3)" min="1">
+              <input type="number" id="num-2" class="form-input" placeholder="下卦數 (例: 7)" min="1">
+              <input type="number" id="num-3" class="form-input" placeholder="動爻數 (例: 5)" min="1">
+            </div>
+            <button id="btn-apply-numbers" class="btn btn-primary">
+              <span>🔮</span> 依數字排盤起卦
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 即時卦象展示區 (本卦與之卦) -->
+      <div id="live-hexagram-card" class="card">
+        <h2 class="card-title"><span class="icon">☯</span> 卦象推演結果</h2>
+        
+        <div class="hexagram-duo-container">
+          <!-- 本卦 -->
+          <div class="hex-box">
+            <div class="hex-header">
+              <span class="item-tag" style="background: var(--c-red-light); color: var(--c-red); font-weight: 700;">【本卦】當前處境</span>
+              <div class="hex-palace-title">
+                <span class="hex-unicode" id="disp-orig-unicode">䷀</span>
+                <span id="disp-orig-name">乾為天</span>
+              </div>
+              <div class="hex-trigrams-desc" id="disp-orig-trigrams">上乾天 · 下乾天</div>
+            </div>
+            <div class="hex-lines-stack" id="disp-orig-stack">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- 轉換指針 -->
+          <div class="hex-arrow">
+            <span>➔</span>
+            <span class="hex-arrow-text" id="disp-moving-count">動爻變化</span>
+          </div>
+
+          <!-- 之卦 -->
+          <div class="hex-box">
+            <div class="hex-header">
+              <span class="item-tag" style="background: var(--c-jade-light); color: var(--c-jade); font-weight: 700;">【之卦】趨勢演變</span>
+              <div class="hex-palace-title">
+                <span class="hex-unicode" id="disp-changed-unicode">䷀</span>
+                <span id="disp-changed-name">無變卦</span>
+              </div>
+              <div class="hex-trigrams-desc" id="disp-changed-trigrams">（六爻安靜）</div>
+            </div>
+            <div class="hex-lines-stack" id="disp-changed-stack">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 朱熹占法解卦方針指引 -->
+        <div class="zhuxi-banner">
+          <span class="zhuxi-icon">💡</span>
+          <div>
+            <div class="zhuxi-title" id="zhuxi-rule-title">【朱熹斷卦指引】</div>
+            <div class="zhuxi-desc" id="zhuxi-rule-desc">正在計算斷卦重心...</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 1rem;">
+          <button id="btn-goto-record" class="btn btn-primary btn-large">
+            <span>📜</span> 查看並填寫 13 項占卦記錄
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ====================================================================
+         TAB 2: 占卦成果紀錄 (13項完整欄位)
+         ==================================================================== -->
+    <section id="tab-record" class="view-section">
+      
+      <div class="card" style="border-top: 4px solid var(--c-red);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+          <div>
+            <h2 class="card-title" style="margin-bottom: 0.3rem; border: none; padding: 0;">
+              <span class="icon">📜</span> 易經占筮記錄表 (全十三項)
+            </h2>
+            <p style="font-size: 0.9rem; color: var(--text-muted);">
+              依據您所指定的 13 項格式完整記錄。您可以直接在「心得記錄」欄位輸入個人體悟與覆盤。
+            </p>
+          </div>
+
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <button id="btn-save-record" class="btn btn-primary">
+              <span>💾</span> 保存占卜記錄
+            </button>
+            <button id="btn-new-divination-record" class="btn btn-outline-red">
+              <span>✨</span> 占問下一卦 (開新卦)
+            </button>
+            <button id="btn-copy-markdown" class="btn btn-secondary">
+              <span>📋</span> 複製 Markdown
+            </button>
+            <button id="btn-download-markdown" class="btn btn-secondary">
+              <span>📥</span> 匯出 .md 檔
+            </button>
+            <button id="btn-print" class="btn btn-secondary">
+              <span>🖨️</span> 列印 / PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- 13項展示區 -->
+        <div class="record-section-container">
+          
+          <!-- 基本信息行 (1, 2, 3) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+            <div class="item-box">
+              <div class="item-box-header">
+                <span class="item-num-title">1. 占卜日期</span>
+                <span class="item-tag">時間戳記</span>
+              </div>
+              <div class="item-content" id="rec-val-date" style="font-weight: 600;">2026-10-06 10:30</div>
+            </div>
+
+            <div class="item-box">
+              <div class="item-box-header">
+                <span class="item-num-title">2. 占卜主題</span>
+                <span class="item-tag">所問事項</span>
+              </div>
+              <div class="item-content" id="rec-val-topic" style="font-weight: 700; color: var(--c-red);">未填寫主題</div>
+            </div>
+
+            <div class="item-box">
+              <div class="item-box-header">
+                <span class="item-num-title">3. 占卜者</span>
+                <span class="item-tag">問卦人</span>
+              </div>
+              <div class="item-content" id="rec-val-querent" style="font-weight: 600;">本人</div>
+            </div>
+          </div>
+
+          <!-- 卦象概要行 (4, 5, 6) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+            <div class="item-box">
+              <div class="item-box-header">
+                <span class="item-num-title">4. 本卦卦名</span>
+                <span class="item-tag">初起之象</span>
+              </div>
+              <div class="item-content" style="font-size: 1.25rem; font-weight: 700; color: var(--c-ink);" id="rec-val-orig-name">
+                乾為天
+              </div>
+            </div>
+
+            <div class="item-box">
+              <div class="item-box-header">
+                <span class="item-num-title">5. 動爻</span>
+                <span class="item-tag">變機所在</span>
+              </div>
+              <div class="item-content" style="font-size: 1.1rem; font-weight: 700; color: var(--c-red);" id="rec-val-moving-lines">
+                無動爻（六爻安靜）
+              </div>
+            </div>
+
+            <div class="item-box">
+              <div class="item-box-header">
+                <span class="item-num-title">6. 之卦卦名</span>
+                <span class="item-tag">趨向變卦</span>
+              </div>
+              <div class="item-content" style="font-size: 1.25rem; font-weight: 700; color: var(--c-jade);" id="rec-val-changed-name">
+                無變卦
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. 本卦卦詞 -->
+          <div class="item-box">
+            <div class="item-box-header">
+              <span class="item-num-title">7. 本卦卦詞</span>
+              <span class="item-tag">周易原典彖判</span>
+            </div>
+            <div class="classic-quote" id="rec-val-orig-guaci">
+              乾：元亨，利貞。
+            </div>
+            <div class="daxiang-quote" id="rec-val-orig-daxiang">
+              象曰：天行健，君子以自強不息。
+            </div>
+          </div>
+
+          <!-- 8. 本卦卦意 -->
+          <div class="item-box">
+            <div class="item-box-header">
+              <span class="item-num-title">8. 本卦卦意</span>
+              <span class="item-tag">當前形勢與行動指引</span>
+            </div>
+            <div class="item-content modern-meaning" id="rec-val-orig-guayi">
+              正在載入卦意解釋...
+            </div>
+          </div>
+
+          <!-- 9. 動爻爻詞 -->
+          <div class="item-box">
+            <div class="item-box-header">
+              <span class="item-num-title">9. 動爻爻詞</span>
+              <span class="item-tag">變動爻位原文</span>
+            </div>
+            <div id="rec-val-moving-yaoci-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- 10. 動爻爻義 -->
+          <div class="item-box">
+            <div class="item-box-header">
+              <span class="item-num-title">10. 動爻爻義</span>
+              <span class="item-tag">白話解析與時機利弊</span>
+            </div>
+            <div id="rec-val-moving-yaoyi-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- 11. 之卦卦詞 -->
+          <div class="item-box">
+            <div class="item-box-header">
+              <span class="item-num-title">11. 之卦卦詞</span>
+              <span class="item-tag">變卦原典彖判</span>
+            </div>
+            <div class="classic-quote" id="rec-val-changed-guaci">
+              （無動爻，無之卦）
+            </div>
+            <div class="daxiang-quote" id="rec-val-changed-daxiang" style="display: none;">
+              <!-- Changed daxiang -->
+            </div>
+          </div>
+
+          <!-- 12. 之卦卦意 -->
+          <div class="item-box">
+            <div class="item-box-header">
+              <span class="item-num-title">12. 之卦卦意</span>
+              <span class="item-tag">演變結局與後續趨向</span>
+            </div>
+            <div class="item-content modern-meaning" id="rec-val-changed-guayi">
+              （無動爻，無之卦）
+            </div>
+          </div>
+
+          <!-- 13. 心得記錄 (可直接編輯) -->
+          <div class="item-box" style="border: 2px solid var(--c-gold); background: #fffcf7;">
+            <div class="item-box-header">
+              <span class="item-num-title" style="color: #7d5700;">
+                <span>✍️</span> 13. 心得記錄 (個人感悟與應驗覆盤)
+              </span>
+              <div style="display: flex; gap: 0.4rem;">
+                <button type="button" class="tag-btn" onclick="insertNoteTemplate('first_thought')">+ 感悟範本</button>
+                <button type="button" class="tag-btn" onclick="insertNoteTemplate('action_plan')">+ 行動決策</button>
+                <button type="button" class="tag-btn" onclick="insertNoteTemplate('outcome_review')">+ 事後應驗</button>
+              </div>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              易道貴在參悟與實踐。您可在下方直接編輯紀錄，儲存時將完整寫入本地 Markdown 檔案。
+            </p>
+            <textarea id="rec-val-notes" class="form-textarea" rows="6" placeholder="請在此輸入您對本次占卜的心得、感觸、擬採取的行動策略，或日後回頭覆盤的應驗紀錄..."></textarea>
+          </div>
+
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button id="btn-save-record-bottom" class="btn btn-primary btn-large">
+            <span>💾</span> 保存占卜記錄
+          </button>
+          <button id="btn-new-divination-bottom" class="btn btn-secondary btn-large">
+            <span>✨</span> 占問下一卦 (開新卦)
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ====================================================================
+         TAB 3: 歷史紀錄匣
+         ==================================================================== -->
+    <section id="tab-history" class="view-section">
+      <div class="card">
+        <h2 class="card-title"><span class="icon">📚</span> 歷史占卜檔案庫</h2>
+
+        <div class="history-controls">
+          <input type="text" id="hist-search-input" class="form-input search-input" placeholder="🔍 搜尋主題、問卦人、卦名、心得...">
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <button id="btn-open-folder" class="btn btn-secondary">
+              <span>📁</span> 開啟本機紀錄資料夾
+            </button>
+            <button id="btn-export-all" class="btn btn-secondary">
+              <span>📦</span> 備份全紀錄 (JSON)
+            </button>
+            <button id="btn-import-records" class="btn btn-secondary">
+              <span>📥</span> 匯入備份 (JSON)
+            </button>
+            <input type="file" id="input-import-file" accept=".json" style="display: none;">
+          </div>
+        </div>
+
+        <div class="history-grid" id="history-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="history-empty" style="text-align: center; padding: 3rem 1rem; color: var(--text-light); display: none;">
+          <div style="font-size: 3rem; margin-bottom: 0.8rem;">📭</div>
+          <p style="font-size: 1.1rem; font-weight: 600;">尚無占卜歷史紀錄</p>
+          <p style="font-size: 0.9rem; margin-top: 0.3rem;">請至「占卜起卦」進行第一次問占並儲存。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         TAB 4: 六十四卦全覽典
+         ==================================================================== -->
+    <section id="tab-encyclopedia" class="view-section">
+      <div class="card">
+        <h2 class="card-title"><span class="icon">🔍</span> 六十四卦圖文大典</h2>
+        <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;">
+          點擊任一卦象，可直接檢視其卦辭、卦意、大象傳與六爻全貌，亦可一鍵載入至起卦區。
+        </p>
+
+        <div class="encyclopedia-grid" id="encyclopedia-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

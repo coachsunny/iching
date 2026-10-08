@@ -1,0 +1,12 @@
+# 易經占卜系統 - Git 忽略設定
+# 避免個人占卦隱私筆記被上傳至公開的 GitHub 倉庫
+
+# 若您希望將占卦紀錄公開備份，可將下面兩行 records 註解掉
+records/*.md
+records/records.json
+!records/.gitkeep
+
+# 系統臨時檔
+.DS_Store
+Thumbs.db
+*.log
