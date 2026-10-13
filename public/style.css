@@ -442,6 +442,21 @@ body {
   font-size: 1.05rem;
 }
 
+.btn:disabled, .btn[disabled] {
+  opacity: 0.68;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-saved-success {
+  background-color: var(--c-jade) !important;
+  color: #ffffff !important;
+  border-color: var(--c-jade) !important;
+  box-shadow: 0 3px 10px rgba(46, 125, 50, 0.25) !important;
+}
+
 /* Lines Building Track */
 .lines-track {
   display: flex;

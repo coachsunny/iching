@@ -16,6 +16,8 @@
   let currentValues = [7, 7, 7, 7, 7, 7];
   let currentTossStep = 0; // 當前擲到第幾爻 (0~5)，6表示擲完
   let currentRecordId = null; // 當前記錄 ID，null 代表全新起卦
+  let isSavingRecord = false; // 防重複儲存連點鎖定
+  let lastSaveTimestamp = 0; // 上次儲存時間戳記 (防抖節流)
 
   // 爻位繁體名稱
   const YAO_POS_NAMES = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
@@ -877,8 +879,46 @@
     };
   }
 
-  // 儲存記錄 (寫入本地 Markdown 檔案與資料庫)
+  // 儲存記錄 (防重複點擊、防連按寫入本地 Markdown 檔案與資料庫)
   async function saveCurrentRecord() {
+    const now = Date.now();
+
+    // 1. 防重複連點：檢查是否正在儲存中，或距離上次點擊小於 1.5 秒
+    if (isSavingRecord) {
+      showToast('⏳ 正在儲存中，請稍候...', 'info');
+      return;
+    }
+    if (now - lastSaveTimestamp < 1500) {
+      showToast('✅ 紀錄已為您保存，請勿重複快速點擊！', 'info');
+      return;
+    }
+
+    isSavingRecord = true;
+    lastSaveTimestamp = now;
+
+    // 2. 獲取按鈕元素並切換為禁用讀取狀態
+    const btnSaveTop = document.getElementById('btn-save-record');
+    const btnSaveBottom = document.getElementById('btn-save-record-bottom');
+
+    const updateSaveButtons = (disabled, text, isSuccess = false) => {
+      [btnSaveTop, btnSaveBottom].forEach(btn => {
+        if (!btn) return;
+        btn.disabled = disabled;
+        btn.innerHTML = text;
+        if (isSuccess) {
+          btn.classList.add('btn-saved-success');
+        } else {
+          btn.classList.remove('btn-saved-success');
+        }
+      });
+    };
+
+    updateSaveButtons(true, '<span class="spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; margin-right:4px;"></span> 儲存中...');
+
+    // 3. 鎖定當前 ID，確保無論點擊幾次都更新同一筆，絕不產生重複紀錄
+    if (!currentRecordId) {
+      currentRecordId = 'rec_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    }
     const payload = getCurrentRecordPayload();
 
     try {
@@ -898,9 +938,6 @@
         // Server not reachable (如 GitHub Pages 或無後端環境)
       }
 
-      // 重要：標記當前占卦已成功存檔，防止開新卦時誤判為未儲存
-      currentRecordId = payload.id;
-
       // LocalStorage 同步備份
       saveToLocalStorage(payload);
 
@@ -910,9 +947,19 @@
 
       // 重新載入歷史列表
       await loadHistoryRecords();
+
+      // 4. 按鈕切換為「已成功保存」視覺回饋，並鎖定 1.2 秒防呆冷卻
+      updateSaveButtons(true, '<span>✅</span> 已成功保存', true);
+      setTimeout(() => {
+        updateSaveButtons(false, '<span>💾</span> 保存占卜記錄', false);
+        isSavingRecord = false;
+      }, 1200);
+
     } catch (err) {
       console.error('儲存失敗:', err);
       showToast('儲存時發生錯誤: ' + err.message, 'error');
+      updateSaveButtons(false, '<span>💾</span> 保存占卜記錄', false);
+      isSavingRecord = false;
     }
   }
 
