@@ -891,19 +891,21 @@
         });
         if (res.ok) {
           const resData = await res.json();
-          currentRecordId = resData.id;
           savedViaServer = true;
-          showToast(`✅ 占卜記錄已成功保存！\n檔案已存至 records/${resData.filename || ''}`, 'success');
+          showToast(`✅ 占卜記錄已成功保存！\n已存至 records/${resData.filename || ''} 與歷史檔案庫`, 'success');
         }
       } catch (e) {
         // Server not reachable (如 GitHub Pages 或無後端環境)
       }
 
+      // 重要：標記當前占卦已成功存檔，防止開新卦時誤判為未儲存
+      currentRecordId = payload.id;
+
       // LocalStorage 同步備份
       saveToLocalStorage(payload);
 
       if (!savedViaServer) {
-        showToast('✅ 記錄已成功儲存至瀏覽器本地庫存！隨時可匯出備份。', 'success');
+        showToast('✅ 占卜記錄已成功存入「歷史紀錄匣」！隨時可載入覆盤，亦可點「匯出 .md」下載檔案。', 'success');
       }
 
       // 重新載入歷史列表
@@ -1034,12 +1036,10 @@ ${p.aiAnalysis || '（尚未進行 AI 分析）'}
       const res = await fetch('/api/open-folder', { method: 'POST' });
       if (res.ok) {
         showToast('📂 已於本機檔案總管開啟 records 資料夾！', 'success');
-      } else {
-        showToast('本機檔案總管路徑為：D:\\易經\\records', 'info');
+        return;
       }
-    } catch (e) {
-      showToast('本機檔案總管路徑為：D:\\易經\\records', 'info');
-    }
+    } catch (e) {}
+    showToast('💡 提示：本機資料夾為 D:\\易經\\records (需啟動 node server.js)；在 GitHub Pages 上可直接點擊「匯出備份 (JSON)」或在個別紀錄中點擊「匯出 .md」下載檔案。', 'info');
   }
 
   // 備份全部 JSON
@@ -1118,17 +1118,42 @@ ${p.aiAnalysis || '（尚未進行 AI 分析）'}
   async function loadHistoryRecords() {
     try {
       let list = [];
+      let loadedFromServer = false;
+
+      // 1. 若本地伺服器在線，嘗試從伺服器讀取
       try {
         const res = await fetch('/api/records');
         if (res.ok) {
-          list = await res.json();
+          const serverList = await res.json();
+          if (Array.isArray(serverList)) {
+            list = serverList;
+            loadedFromServer = true;
+            // 同步快取至 localStorage 作為雙重備份
+            if (list.length > 0) {
+              localStorage.setItem('iching_records', JSON.stringify(list));
+            }
+          }
         }
       } catch (e) {
-        // fallback to localStorage
-        list = JSON.parse(localStorage.getItem('iching_records') || '[]');
+        // 伺服器離線 (例如純靜態環境、GitHub Pages 或無網路)
       }
 
-      recordsList = list;
+      // 2. 若未成功自伺服器取得資料 (例如 GitHub Pages 回傳 404)，自動從瀏覽器 localStorage 讀取
+      if (!loadedFromServer || !Array.isArray(list) || list.length === 0) {
+        try {
+          const localStr = localStorage.getItem('iching_records');
+          if (localStr) {
+            const parsed = JSON.parse(localStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              list = parsed;
+            }
+          }
+        } catch (e) {
+          console.warn('LocalStorage 解析失敗:', e);
+        }
+      }
+
+      recordsList = Array.isArray(list) ? list : [];
       const countEl = document.getElementById('history-count');
       if (countEl) countEl.textContent = recordsList.length;
       renderHistoryGrid(recordsList);
@@ -1291,6 +1316,10 @@ ${p.aiAnalysis || '（尚未進行 AI 分析）'}
       let localRecords = JSON.parse(localStorage.getItem('iching_records') || '[]');
       localRecords = localRecords.filter(r => r.id !== id);
       localStorage.setItem('iching_records', JSON.stringify(localRecords));
+
+      if (currentRecordId === id) {
+        currentRecordId = null;
+      }
 
       showToast('紀錄已成功刪除', 'success');
       await loadHistoryRecords();
