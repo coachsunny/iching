@@ -71,6 +71,7 @@ function generateMarkdownRecord(data) {
     changedGuaci = '',
     changedGuayi = '',
     notes = '',
+    aiAnalysis = '',
     zhuxiRule = '',
     hexagramDiagram = ''
   } = data;
@@ -129,6 +130,11 @@ ${changedGuayi || '（無動爻，無之卦）'}
 
 ### 13. 心得記錄:
 ${notes ? notes : '（尚無心得筆記）'}
+
+---
+
+### 14. DeepSeek AI 智慧解卦分析:
+${aiAnalysis ? aiAnalysis : '（尚未進行 AI 分析）'}
 
 ---
 *記錄建立時間: ${new Date().toLocaleString('zh-TW', { hour12: false })}*

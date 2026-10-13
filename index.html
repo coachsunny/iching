@@ -536,6 +536,60 @@
             <textarea id="rec-val-notes" class="form-textarea" rows="6" placeholder="請在此輸入您對本次占卜的心得、感觸、擬採取的行動策略，或日後回頭覆盤的應驗紀錄..."></textarea>
           </div>
 
+          <!-- 14. DeepSeek AI 智慧解卦分析 -->
+          <div class="item-box" style="border: 2px solid var(--c-blue); background: #f8fbff;">
+            <div class="item-box-header" style="flex-wrap: wrap; gap: 0.6rem;">
+              <span class="item-num-title" style="color: var(--c-blue);">
+                <span>🤖</span> 14. DeepSeek AI 智慧解卦分析
+              </span>
+              <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                <span id="ai-model-badge" class="badge" style="background: var(--c-blue); font-size: 0.75rem;">deepseek-chat</span>
+                <button type="button" id="btn-run-ai" class="btn btn-primary" style="background: var(--c-blue); font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+                  <span id="ai-btn-icon">✨</span> <span id="ai-btn-text">啟動 AI 解卦</span>
+                </button>
+                <button type="button" id="btn-ai-settings" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;" title="設定 DeepSeek API Key">
+                  <span>⚙️</span> API 設定
+                </button>
+                <button type="button" id="btn-copy-ai" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;" title="複製 AI 分析內容">
+                  <span>📋</span> 複製
+                </button>
+                <button type="button" id="btn-toggle-ai-edit" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;" title="編輯或預覽 AI 內容">
+                  <span>✏️</span> 編輯
+                </button>
+              </div>
+            </div>
+            
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.6rem;">
+              連結 DeepSeek API 進行全卦象、動爻與主題的哲學義理深度推演。分析結果將隨本筆占卜記錄<strong>一同永久保存</strong>。
+            </p>
+
+            <!-- AI 執行中提示 -->
+            <div id="ai-status-bar" style="display: none; align-items: center; gap: 0.6rem; font-size: 0.88rem; color: var(--c-blue); margin-bottom: 0.75rem; font-weight: 600; background: #eaf1fc; padding: 0.5rem 0.85rem; border-radius: var(--radius-sm);">
+              <span class="spinner"></span>
+              <span id="ai-status-text">DeepSeek 正在深研卦象與義理中，請稍候...</span>
+            </div>
+
+            <!-- AI 深度思考區塊 (針對 DeepSeek-R1 / deepseek-reasoner) -->
+            <details id="ai-reasoning-details" class="ai-reasoning-box" style="display: none;">
+              <summary class="ai-reasoning-summary">
+                <span>🧠</span> <strong>DeepSeek-R1 思考過程 (點擊展開/收合)</strong>
+              </summary>
+              <div id="ai-reasoning-content" style="margin-top: 0.5rem; white-space: pre-wrap; font-family: var(--font-sans); color: #64748b; line-height: 1.6;"></div>
+            </details>
+
+            <!-- AI 渲染預覽區 -->
+            <div id="ai-analysis-render" class="ai-rendered-content" style="min-height: 110px; background: #ffffff; border: 1px solid #d4e2f5; border-radius: var(--radius-sm); padding: 1rem 1.25rem; font-size: 0.95rem; line-height: 1.8;">
+              <div id="ai-analysis-placeholder" style="color: var(--text-light); text-align: center; padding: 2rem 1rem;">
+                <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🔮</div>
+                點擊上方「<strong>✨ 啟動 AI 解卦</strong>」，DeepSeek 將針對問占主題、本卦、動爻與之卦提供深刻獨到的決策反饋。<br>
+                <small style="color: #a0aec0;">（初次使用請先點擊「⚙️ API 設定」輸入您的 DeepSeek API Key）</small>
+              </div>
+            </div>
+
+            <!-- 原始文字編輯區 (切換時顯示) -->
+            <textarea id="rec-val-ai-analysis" class="form-textarea" rows="8" style="display: none; margin-top: 0.5rem; font-size: 0.92rem; background: #fff;" placeholder="此處為 AI 分析的原始 Markdown 文字，您可自由補充或微調..."></textarea>
+          </div>
+
         </div>
 
         <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
@@ -603,6 +657,56 @@
     </section>
 
   </main>
+
+  <!-- DeepSeek API Settings Modal -->
+  <div id="modal-ai-settings" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--c-ink); display: flex; align-items: center; gap: 0.5rem;">
+          <span>⚙️</span> DeepSeek API 連線設定
+        </h3>
+        <button type="button" class="modal-close-btn" id="btn-close-ai-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 1.1rem;">
+          <label class="form-label">
+            <span>DeepSeek API Key</span> <span class="req">*</span>
+          </label>
+          <div style="position: relative;">
+            <input type="password" id="input-deepseek-key" class="form-input" placeholder="sk-..." style="padding-right: 42px;">
+            <button type="button" id="btn-toggle-key-visibility" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1rem;" title="顯示/隱藏金鑰">👁️</button>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; line-height: 1.5;">
+            🔒 金鑰僅安全存放在您的裝置瀏覽器中（LocalStorage），不會上傳至任何伺服器，安全保密。<br>
+            尚未有 API Key？前往 <a href="https://platform.deepseek.com/" target="_blank" rel="noopener" style="color: var(--c-blue); text-decoration: underline; font-weight: 600;">DeepSeek 開放平台</a> 註冊獲取。
+          </p>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.1rem;">
+          <label class="form-label">選擇模型 (Model)</label>
+          <select id="select-deepseek-model" class="form-select">
+            <option value="deepseek-chat">deepseek-chat (DeepSeek-V3 · 速度快、解卦通達精闢)</option>
+            <option value="deepseek-reasoner">deepseek-reasoner (DeepSeek-R1 · 深度思維推演、嚴密周至)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label class="form-label">API 伺服器端點 (Base URL)</label>
+          <input type="text" id="input-deepseek-url" class="form-input" value="https://api.deepseek.com" placeholder="https://api.deepseek.com">
+          <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 3px;">預設為 DeepSeek 官方端點，若使用自建反向代理可修改。</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-test-deepseek" class="btn btn-secondary">
+          <span id="test-key-spinner" class="spinner" style="display: none; width: 14px; height: 14px;"></span>
+          <span id="test-key-text">🔌 測試連線</span>
+        </button>
+        <button type="button" id="btn-save-deepseek-settings" class="btn btn-primary" style="background: var(--c-blue);">
+          <span>💾 儲存設定</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

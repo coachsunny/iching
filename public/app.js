@@ -31,6 +31,8 @@
     setupNewDivinationButtons();
     setupHistorySearch();
     setupImportRecords();
+    setupDeepSeekSettings();
+    setupAiAnalysisActions();
 
     await loadHexagramsData();
     populateSelectHexagramDropdown();
@@ -127,11 +129,13 @@
   window.createNewDivination = function(askConfirm = true) {
     const topicInput = document.getElementById('input-topic');
     const notesInput = document.getElementById('rec-val-notes');
+    const aiInput = document.getElementById('rec-val-ai-analysis');
     const hasUnsavedContent = (topicInput && topicInput.value.trim().length > 0) || 
-                              (notesInput && notesInput.value.trim().length > 0);
+                              (notesInput && notesInput.value.trim().length > 0) ||
+                              (aiInput && aiInput.value.trim().length > 0);
 
     if (askConfirm && hasUnsavedContent && !currentRecordId) {
-      if (!confirm('是否確認開啟新的一卦？\n（當前尚未儲存的主題與心得內容將被清空）')) {
+      if (!confirm('是否確認開啟新的一卦？\n（當前尚未儲存的主題、心得與 AI 分析將被清空）')) {
         return;
       }
     }
@@ -151,6 +155,29 @@
     if (notesInput) {
       notesInput.value = '';
     }
+
+    // 4.1 清空 AI 分析與思考過程
+    if (aiInput) {
+      aiInput.value = '';
+    }
+    const aiRender = document.getElementById('ai-analysis-render');
+    if (aiRender) {
+      aiRender.innerHTML = `
+        <div id="ai-analysis-placeholder" style="color: var(--text-light); text-align: center; padding: 2rem 1rem;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🔮</div>
+          點擊上方「<strong>✨ 啟動 AI 解卦</strong>」，DeepSeek 將針對問占主題、本卦、動爻與之卦提供深刻獨到的決策反饋。<br>
+          <small style="color: #a0aec0;">（初次使用請先點擊「⚙️ API 設定」輸入您的 DeepSeek API Key）</small>
+        </div>
+      `;
+    }
+    const aiReasoning = document.getElementById('ai-reasoning-details');
+    if (aiReasoning) aiReasoning.style.display = 'none';
+    const aiReasoningContent = document.getElementById('ai-reasoning-content');
+    if (aiReasoningContent) aiReasoningContent.textContent = '';
+    const aiStatusBar = document.getElementById('ai-status-bar');
+    if (aiStatusBar) aiStatusBar.style.display = 'none';
+    const aiBtnText = document.getElementById('ai-btn-text');
+    if (aiBtnText) aiBtnText.textContent = '啟動 AI 解卦';
 
     // 5. 重設起卦狀態
     currentTossStep = 0;
@@ -843,6 +870,7 @@
       changedGuaci: hasMoving ? (changedHex.guaci + (changedHex.daxiang ? `\n\n大象傳：${changedHex.daxiang}` : '')) : '（無動爻，無之卦）',
       changedGuayi: hasMoving ? changedHex.guayi : '（無動爻，無之卦）',
       notes: notesVal,
+      aiAnalysis: (document.getElementById('rec-val-ai-analysis')?.value || '').trim(),
       zhuxiRule: zhuxiRule,
       hexagramDiagram: diagramLines.join('\n'),
       values: [...currentValues]
@@ -907,7 +935,7 @@
     const payload = getCurrentRecordPayload();
     const md = buildMarkdownText(payload);
     navigator.clipboard.writeText(md).then(() => {
-      showToast('📋 已複製完整 13 項占卦 Markdown 至剪貼簿！可直接貼上至筆記。', 'success');
+      showToast('📋 已複製完整 14 項占卦 Markdown 至剪貼簿！可直接貼上至筆記。', 'success');
     }).catch(() => {
       showToast('複製失敗，請手動選取文字。', 'error');
     });
@@ -930,7 +958,7 @@
     showToast('📥 Markdown 檔案已開始下載！', 'success');
   }
 
-  // 建構完整的 13 項標準 Markdown 文字
+  // 建構完整的 14 項標準 Markdown 文字
   function buildMarkdownText(p) {
     return `# 易經占卜記錄表
 
@@ -989,6 +1017,11 @@ ${p.changedGuayi}
 
 ### 13. 心得記錄:
 ${p.notes || '（暫無心得筆記）'}
+
+---
+
+### 14. DeepSeek AI 智慧解卦分析:
+${p.aiAnalysis || '（尚未進行 AI 分析）'}
 
 ---
 *產生自：周易占筮與研習記事系統*
@@ -1119,6 +1152,7 @@ ${p.notes || '（暫無心得筆記）'}
                  (r.originalHexName || '').toLowerCase().includes(kw) ||
                  (r.changedHexName || '').toLowerCase().includes(kw) ||
                  (r.notes || '').toLowerCase().includes(kw) ||
+                 (r.aiAnalysis || '').toLowerCase().includes(kw) ||
                  (r.date || '').includes(kw);
         });
         renderHistoryGrid(filtered);
@@ -1155,11 +1189,12 @@ ${p.notes || '（暫無心得筆記）'}
             <span>➔</span>
             <span>${rec.changedHexName || '無變卦'}</span>
           </div>
-          <div style="font-size: 0.8rem; color: var(--c-gold); margin-bottom: 0.4rem; font-weight: 600;">
-            動爻：${rec.movingLinesNames || '無動爻'}
+          <div style="font-size: 0.8rem; color: var(--c-gold); margin-bottom: 0.4rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <span>動爻：${rec.movingLinesNames || '無動爻'}</span>
+            ${rec.aiAnalysis ? `<span class="badge" style="background:#e0edff; color:#2563eb; font-size:0.72rem;">🤖 含 AI 解卦</span>` : ''}
           </div>
           <div class="hist-notes-snip">
-            💬 ${rec.notes ? rec.notes : '尚無心得筆記'}
+            💬 ${rec.notes ? rec.notes : (rec.aiAnalysis ? '【AI 分析已就緒】' : '尚無心得筆記')}
           </div>
         </div>
         <div class="hist-card-footer">
@@ -1202,6 +1237,35 @@ ${p.notes || '（暫無心得筆記）'}
       const n = document.getElementById('rec-val-notes');
       if (n) n.value = rec.notes;
     }
+
+    // 填回 AI 分析欄位
+    const aiTextarea = document.getElementById('rec-val-ai-analysis');
+    const aiRender = document.getElementById('ai-analysis-render');
+    const aiVal = (rec.aiAnalysis || '').trim();
+    if (aiTextarea) {
+      aiTextarea.value = aiVal;
+    }
+    if (aiRender) {
+      if (aiVal) {
+        aiRender.innerHTML = renderSimpleMarkdown(aiVal);
+      } else {
+        aiRender.innerHTML = `
+          <div id="ai-analysis-placeholder" style="color: var(--text-light); text-align: center; padding: 2rem 1rem;">
+            <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🔮</div>
+            點擊上方「<strong>✨ 啟動 AI 解卦</strong>」，DeepSeek 將針對問占主題、本卦、動爻與之卦提供深刻獨到的決策反饋。<br>
+            <small style="color: #a0aec0;">（初次使用請先點擊「⚙️ API 設定」輸入您的 DeepSeek API Key）</small>
+          </div>
+        `;
+      }
+    }
+    const aiReasoning = document.getElementById('ai-reasoning-details');
+    if (aiReasoning) aiReasoning.style.display = 'none';
+    const aiReasoningContent = document.getElementById('ai-reasoning-content');
+    if (aiReasoningContent) aiReasoningContent.textContent = '';
+    const aiStatusBar = document.getElementById('ai-status-bar');
+    if (aiStatusBar) aiStatusBar.style.display = 'none';
+    const aiBtnText = document.getElementById('ai-btn-text');
+    if (aiBtnText) aiBtnText.textContent = aiVal ? '重新執行 AI 解卦' : '啟動 AI 解卦';
 
     currentTossStep = 6;
     renderCoinTrack();
@@ -1290,7 +1354,590 @@ ${p.notes || '（暫無心得筆記）'}
     }
   };
 
-  // --- 15. 提示 Toast ---
+  // --- 15. DeepSeek AI 智慧解卦整合 ---
+  let isAiGenerating = false;
+  let isAiEditing = false;
+
+  function setupDeepSeekSettings() {
+    const modal = document.getElementById('modal-ai-settings');
+    const btnSettings = document.getElementById('btn-ai-settings');
+    const btnClose = document.getElementById('btn-close-ai-modal');
+    const btnSave = document.getElementById('btn-save-deepseek-settings');
+    const btnTest = document.getElementById('btn-test-deepseek');
+    const btnToggleKey = document.getElementById('btn-toggle-key-visibility');
+
+    const inputKey = document.getElementById('input-deepseek-key');
+    const selectModel = document.getElementById('select-deepseek-model');
+    const inputUrl = document.getElementById('input-deepseek-url');
+
+    // 初始載入設定並更新標籤
+    updateAiModelBadge();
+
+    function openModal() {
+      if (inputKey) inputKey.value = localStorage.getItem('deepseek_api_key') || '';
+      if (selectModel) selectModel.value = localStorage.getItem('deepseek_model') || 'deepseek-chat';
+      if (inputUrl) inputUrl.value = localStorage.getItem('deepseek_base_url') || 'https://api.deepseek.com';
+      if (inputKey) inputKey.type = 'password';
+      if (btnToggleKey) btnToggleKey.textContent = '👁️';
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      if (modal) modal.style.display = 'none';
+    }
+
+    if (btnSettings) btnSettings.addEventListener('click', openModal);
+    if (btnClose) btnClose.addEventListener('click', closeModal);
+
+    // 點擊背景遮罩關閉
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    // 密碼顯示/隱藏切換
+    if (btnToggleKey && inputKey) {
+      btnToggleKey.addEventListener('click', () => {
+        if (inputKey.type === 'password') {
+          inputKey.type = 'text';
+          btnToggleKey.textContent = '🙈';
+        } else {
+          inputKey.type = 'password';
+          btnToggleKey.textContent = '👁️';
+        }
+      });
+    }
+
+    // 儲存設定
+    if (btnSave) {
+      btnSave.addEventListener('click', () => {
+        const key = (inputKey ? inputKey.value : '').trim();
+        const model = selectModel ? selectModel.value : 'deepseek-chat';
+        let url = (inputUrl ? inputUrl.value : '').trim() || 'https://api.deepseek.com';
+        url = url.replace(/\/+$/, '');
+
+        localStorage.setItem('deepseek_api_key', key);
+        localStorage.setItem('deepseek_model', model);
+        localStorage.setItem('deepseek_base_url', url);
+
+        updateAiModelBadge();
+        closeModal();
+        showToast('✅ DeepSeek API 設定已成功儲存！', 'success');
+      });
+    }
+
+    // 測試連線
+    if (btnTest) {
+      btnTest.addEventListener('click', async () => {
+        const key = (inputKey ? inputKey.value : '').trim();
+        const model = selectModel ? selectModel.value : 'deepseek-chat';
+        let url = (inputUrl ? inputUrl.value : '').trim() || 'https://api.deepseek.com';
+        url = url.replace(/\/+$/, '');
+
+        if (!key) {
+          showToast('請先輸入 API Key 再進行連線測試', 'error');
+          if (inputKey) inputKey.focus();
+          return;
+        }
+
+        const spinner = document.getElementById('test-key-spinner');
+        const text = document.getElementById('test-key-text');
+        if (spinner) spinner.style.display = 'inline-block';
+        if (text) text.textContent = '連線測試中...';
+        btnTest.disabled = true;
+
+        try {
+          await testDeepSeekConnection(key, url, model);
+          showToast('🎉 連線測試成功！API Key 授權正常運作。', 'success');
+        } catch (err) {
+          showToast('❌ 連線測試失敗：' + err.message, 'error');
+        } finally {
+          if (spinner) spinner.style.display = 'none';
+          if (text) text.textContent = '🔌 測試連線';
+          btnTest.disabled = false;
+        }
+      });
+    }
+  }
+
+  function updateAiModelBadge() {
+    const badge = document.getElementById('ai-model-badge');
+    if (!badge) return;
+    const model = localStorage.getItem('deepseek_model') || 'deepseek-chat';
+    const hasKey = !!(localStorage.getItem('deepseek_api_key') || '').trim();
+
+    if (model === 'deepseek-reasoner') {
+      badge.textContent = hasKey ? 'DeepSeek-R1 (深度推演)' : 'DeepSeek-R1 (未設金鑰)';
+      badge.style.background = '#4f46e5';
+    } else {
+      badge.textContent = hasKey ? 'DeepSeek-V3 (解卦通達)' : 'DeepSeek-V3 (未設金鑰)';
+      badge.style.background = 'var(--c-blue)';
+    }
+  }
+
+  async function testDeepSeekConnection(apiKey, baseUrl, model) {
+    const endpoint = `${baseUrl}/chat/completions`;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: 'user', content: 'Ping' }],
+        max_tokens: 5
+      })
+    });
+
+    if (!res.ok) {
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const data = await res.json();
+        if (data.error && data.error.message) errMsg = data.error.message;
+      } catch (e) {}
+      if (res.status === 401) {
+        errMsg = 'API Key 無效或未授權，請核對金鑰。';
+      } else if (res.status === 402) {
+        errMsg = 'DeepSeek 帳戶額度不足，請至控制台充值。';
+      }
+      throw new Error(errMsg);
+    }
+    return true;
+  }
+
+  function setupAiAnalysisActions() {
+    const btnRun = document.getElementById('btn-run-ai');
+    const btnCopy = document.getElementById('btn-copy-ai');
+    const btnToggleEdit = document.getElementById('btn-toggle-ai-edit');
+
+    if (btnRun) {
+      btnRun.addEventListener('click', runDeepSeekAnalysis);
+    }
+
+    if (btnCopy) {
+      btnCopy.addEventListener('click', () => {
+        const val = (document.getElementById('rec-val-ai-analysis')?.value || '').trim();
+        if (!val) {
+          showToast('目前尚無可複製的 AI 分析內容', 'info');
+          return;
+        }
+        navigator.clipboard.writeText(val).then(() => {
+          showToast('📋 AI 解卦分析內容已成功複製至剪貼簿！', 'success');
+        }).catch(() => {
+          showToast('複製失敗，請手動複製', 'error');
+        });
+      });
+    }
+
+    if (btnToggleEdit) {
+      btnToggleEdit.addEventListener('click', () => {
+        const textarea = document.getElementById('rec-val-ai-analysis');
+        const render = document.getElementById('ai-analysis-render');
+        if (!textarea || !render) return;
+
+        isAiEditing = !isAiEditing;
+        if (isAiEditing) {
+          textarea.style.display = 'block';
+          render.style.display = 'none';
+          btnToggleEdit.innerHTML = '<span>👁️</span> 預覽';
+          textarea.focus();
+        } else {
+          const val = textarea.value.trim();
+          if (val) {
+            render.innerHTML = renderSimpleMarkdown(val);
+          } else {
+            render.innerHTML = `
+              <div id="ai-analysis-placeholder" style="color: var(--text-light); text-align: center; padding: 2rem 1rem;">
+                <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🔮</div>
+                點擊上方「<strong>✨ 啟動 AI 解卦</strong>」，DeepSeek 將針對問占主題、本卦、動爻與之卦提供深刻獨到的決策反饋。<br>
+                <small style="color: #a0aec0;">（初次使用請先點擊「⚙️ API 設定」輸入您的 DeepSeek API Key）</small>
+              </div>
+            `;
+          }
+          textarea.style.display = 'none';
+          render.style.display = 'block';
+          btnToggleEdit.innerHTML = '<span>✏️</span> 編輯';
+        }
+      });
+    }
+  }
+
+  // 執行 DeepSeek AI 解卦分析串流連線
+  async function runDeepSeekAnalysis() {
+    if (isAiGenerating) return;
+
+    const apiKey = (localStorage.getItem('deepseek_api_key') || '').trim();
+    if (!apiKey) {
+      const modal = document.getElementById('modal-ai-settings');
+      if (modal) modal.style.display = 'flex';
+      showToast('請先輸入並儲存您的 DeepSeek API Key 才能啟動 AI 解卦！', 'info');
+      return;
+    }
+
+    const payload = getCurrentRecordPayload();
+    const btnRun = document.getElementById('btn-run-ai');
+    const btnIcon = document.getElementById('ai-btn-icon');
+    const btnText = document.getElementById('ai-btn-text');
+    const statusBar = document.getElementById('ai-status-bar');
+    const statusText = document.getElementById('ai-status-text');
+    const textarea = document.getElementById('rec-val-ai-analysis');
+    const render = document.getElementById('ai-analysis-render');
+    const reasoningDetails = document.getElementById('ai-reasoning-details');
+    const reasoningContent = document.getElementById('ai-reasoning-content');
+
+    const model = localStorage.getItem('deepseek_model') || 'deepseek-chat';
+    let baseUrl = (localStorage.getItem('deepseek_base_url') || 'https://api.deepseek.com').trim();
+    baseUrl = baseUrl.replace(/\/+$/, '');
+
+    // 切回預覽模式
+    if (isAiEditing && textarea && render) {
+      isAiEditing = false;
+      textarea.style.display = 'none';
+      render.style.display = 'block';
+      const btnToggleEdit = document.getElementById('btn-toggle-ai-edit');
+      if (btnToggleEdit) btnToggleEdit.innerHTML = '<span>✏️</span> 編輯';
+    }
+
+    // UI 進入載入狀態
+    isAiGenerating = true;
+    if (btnRun) btnRun.disabled = true;
+    if (btnIcon) btnIcon.textContent = '⏳';
+    if (btnText) btnText.textContent = 'AI 解卦研析中...';
+    if (statusBar) statusBar.style.display = 'flex';
+    if (statusText) statusText.textContent = '連線至 DeepSeek API，正在深度研析卦象...';
+
+    if (textarea) textarea.value = '';
+    if (render) {
+      render.innerHTML = `
+        <div style="color: var(--c-blue); text-align: center; padding: 2rem 1rem;">
+          <span class="spinner" style="margin-right: 8px;"></span>
+          DeepSeek 正在即時推演卦象、爻變與決策義理...
+        </div>
+      `;
+    }
+
+    if (model === 'deepseek-reasoner') {
+      if (reasoningDetails) {
+        reasoningDetails.style.display = 'block';
+        reasoningDetails.open = true;
+      }
+      if (reasoningContent) reasoningContent.textContent = '';
+    } else {
+      if (reasoningDetails) reasoningDetails.style.display = 'none';
+    }
+
+    const { systemPrompt, userPrompt } = buildDeepSeekPrompt(payload);
+
+    let fullContent = '';
+    let fullReasoning = '';
+
+    try {
+      const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        let errMsg = `HTTP ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData.error && errData.error.message) errMsg = errData.error.message;
+        } catch (e) {}
+
+        if (response.status === 401) {
+          errMsg = 'API Key 無效或未授權，請至「API 設定」重新檢查金鑰。';
+        } else if (response.status === 402) {
+          errMsg = 'DeepSeek 帳戶餘額不足，請至 DeepSeek 開放平台儲值。';
+        } else if (response.status === 429) {
+          errMsg = 'API 請求頻率過高或伺服器忙碌，請稍候重試。';
+        }
+        throw new Error(errMsg);
+      }
+
+      if (statusText) statusText.textContent = 'DeepSeek 正在即時串流輸出解卦剖析...';
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // 保留尚未結尾的一行
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          const dataStr = trimmed.replace(/^data:\s*/, '');
+          if (dataStr === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(dataStr);
+            const delta = parsed.choices?.[0]?.delta;
+            if (delta) {
+              // DeepSeek-R1 思考過程
+              if (delta.reasoning_content) {
+                fullReasoning += delta.reasoning_content;
+                if (reasoningContent) reasoningContent.textContent = fullReasoning;
+              }
+              // 正式回覆內容
+              if (delta.content) {
+                fullContent += delta.content;
+                if (textarea) textarea.value = fullContent;
+                if (render) render.innerHTML = renderSimpleMarkdown(fullContent);
+              }
+            }
+          } catch (e) {
+            // 忽略單個 chunk 解析例外
+          }
+        }
+      }
+
+      // 處理緩衝區殘餘
+      if (buffer.trim()) {
+        const trimmed = buffer.trim();
+        if (trimmed.startsWith('data:')) {
+          const dataStr = trimmed.replace(/^data:\s*/, '');
+          if (dataStr !== '[DONE]') {
+            try {
+              const parsed = JSON.parse(dataStr);
+              const delta = parsed.choices?.[0]?.delta;
+              if (delta?.content) {
+                fullContent += delta.content;
+                if (textarea) textarea.value = fullContent;
+                if (render) render.innerHTML = renderSimpleMarkdown(fullContent);
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      showToast('🎉 DeepSeek AI 解卦分析完成！請檢閱並點擊「保存占卜記錄」。', 'success');
+
+    } catch (err) {
+      console.error('DeepSeek AI 呼叫失敗:', err);
+      showToast('AI 解卦失敗：' + err.message, 'error');
+      if (!fullContent && render) {
+        render.innerHTML = `
+          <div style="color: var(--c-red); padding: 1.5rem; text-align: center; line-height: 1.8;">
+            <div style="font-size: 1.8rem; margin-bottom: 0.3rem;">⚠️</div>
+            <strong>呼叫 DeepSeek API 發生錯誤</strong><br>
+            <span style="font-size: 0.88rem; color: #718096;">${escapeHtml(err.message)}</span><br>
+            <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+              請點擊上方「<strong>⚙️ API 設定</strong>」檢查金鑰是否正確，或確認您的 DeepSeek 帳戶額度。
+            </small>
+          </div>
+        `;
+      }
+    } finally {
+      isAiGenerating = false;
+      if (btnRun) btnRun.disabled = false;
+      if (btnIcon) btnIcon.textContent = '✨';
+      if (btnText) btnText.textContent = fullContent ? '重新執行 AI 解卦' : '啟動 AI 解卦';
+      if (statusBar) statusBar.style.display = 'none';
+    }
+  }
+
+  // 構造 DeepSeek 占筮大師提示詞 (Prompt)
+  function buildDeepSeekPrompt(p) {
+    const systemPrompt = `你是一位深諳《周易》哲理與義理象數的國學智慧大師兼現代決策思維顧問。
+求卦者為現代人，請根據其提出的「占卜主題」、起得的「本卦」、「動爻」及「之卦」，並參酌《易經》古籍本義（卦名、彖辭、大象傳、爻辭）與朱熹占法方針，為求卦者提供深邃、通透且具體切實的解析與引導。
+
+回答架構請包含以下四大部分：
+### 一、 全局象意與當前局勢
+- 剖析本卦的卦象、天地時位與大勢象徵。
+- 本卦如何精準呼應求卦者當下面臨的主題問題或心境處境。
+
+### 二、 動爻機微與關鍵轉折
+- 深入剖析動爻（若六爻安靜無動爻，則就本卦卦辭核心發揮）。
+- 揭示吉凶悔吝的樞紐所在、當前可能隱藏的盲點或轉化關鍵。
+
+### 三、 之卦趨向與長遠演變
+- 闡述經由爻變後，事態朝向之卦的可能走向與中長期態勢（若無之卦，則說明事態循序漸進之穩態）。
+- 提醒事物發展的必然邏輯。
+
+### 四、 現代決策指引與心法策略
+- 【應為之良策】：具體可落實的正面行動、適合的心態調整。
+- 【忌為之防患】：必須提防的失誤、戒忌與處事地雷。
+- 【易道寄語】：一句賦予洞察、定力與信心的精要總結。
+
+風格要求：請使用傳統繁體中文回答，條理分明、文辭雅正溫暖，不流於虛無玄學，旨在啟發智慧與提供高價值之決策參考。`;
+
+    const userPrompt = `請大師為我解卦：
+
+【占卜者】：${p.querent || '本人'}
+【占卜時間】：${p.date}
+【占卜主題】：${p.topic || '（未具體指明主題）'}
+
+【本卦】：${p.originalHexName}
+- 卦辭：${p.originalGuaci}
+- 卦意：${p.originalGuayi}
+
+【動爻變機】：${p.movingLinesNames}
+- 動爻爻辭：${p.movingYaoci}
+- 動爻爻義：${p.movingYaoyi}
+
+【之卦趨向】：${p.changedHexName}
+- 之卦卦辭：${p.changedGuaci}
+- 之卦卦意：${p.changedGuayi}
+
+【解卦方針參考】：${p.zhuxiRule}
+${p.notes ? `【求卦者個人心得/備註】：\n${p.notes}` : ''}
+
+請依據上述卦象與《周易》義理，為我提供深度剖析與行動決策指引。`;
+
+    return { systemPrompt, userPrompt };
+  }
+
+  // 輕量級 Markdown 格式化解析器 (相容無外部依賴環境)
+  function renderSimpleMarkdown(md) {
+    if (!md) return '';
+    const lines = md.split('\n');
+    let html = '';
+    let inList = false;
+    let listType = '';
+    let inBlockquote = false;
+
+    function closeList() {
+      if (inList) {
+        html += `</${listType}>\n`;
+        inList = false;
+        listType = '';
+      }
+    }
+
+    function closeBlockquote() {
+      if (inBlockquote) {
+        html += `</blockquote>\n`;
+        inBlockquote = false;
+      }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // 引文區塊
+      if (line.startsWith('> ')) {
+        closeList();
+        if (!inBlockquote) {
+          html += `<blockquote style="border-left: 4px solid var(--c-blue); background: #f0f6ff; padding: 0.6rem 1rem; margin: 0.8rem 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: #1e3a8a;">`;
+          inBlockquote = true;
+        }
+        html += `<p style="margin: 0.2rem 0;">${formatInlineMd(line.substring(2))}</p>\n`;
+        continue;
+      } else {
+        closeBlockquote();
+      }
+
+      // 標題
+      if (line.startsWith('#### ')) {
+        closeList();
+        html += `<h5 style="margin: 1rem 0 0.35rem; color: var(--c-ink); font-size: 1.05rem; font-weight: 700;">${formatInlineMd(line.substring(5))}</h5>\n`;
+        continue;
+      }
+      if (line.startsWith('### ')) {
+        closeList();
+        html += `<h4 style="margin: 1.25rem 0 0.5rem; color: var(--c-blue); font-size: 1.15rem; font-weight: 700; border-bottom: 1px dashed #cfe2ff; padding-bottom: 0.3rem;">${formatInlineMd(line.substring(4))}</h4>\n`;
+        continue;
+      }
+      if (line.startsWith('## ')) {
+        closeList();
+        html += `<h3 style="margin: 1.4rem 0 0.6rem; color: var(--c-ink); font-size: 1.28rem; font-weight: 700; border-left: 4px solid var(--c-blue); padding-left: 0.5rem;">${formatInlineMd(line.substring(3))}</h3>\n`;
+        continue;
+      }
+      if (line.startsWith('# ')) {
+        closeList();
+        html += `<h2 style="margin: 1.5rem 0 0.7rem; color: var(--c-ink); font-size: 1.4rem; font-weight: 700;">${formatInlineMd(line.substring(2))}</h2>\n`;
+        continue;
+      }
+
+      // 水平分割線
+      if (/^(\-{3,}|\*{3,})$/.test(line.trim())) {
+        closeList();
+        html += `<hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid #e2e8f0;">\n`;
+        continue;
+      }
+
+      // 無序清單 (* 或 -)
+      const ulMatch = line.match(/^(\s*)([-*])\s+(.+)$/);
+      if (ulMatch) {
+        if (!inList || listType !== 'ul') {
+          closeList();
+          html += `<ul style="margin: 0.5rem 0; padding-left: 1.6rem; line-height: 1.8;">\n`;
+          inList = true;
+          listType = 'ul';
+        }
+        html += `<li style="margin-bottom: 0.3rem;">${formatInlineMd(ulMatch[3])}</li>\n`;
+        continue;
+      }
+
+      // 有序清單 (1. 2. 等)
+      const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
+      if (olMatch) {
+        if (!inList || listType !== 'ol') {
+          closeList();
+          html += `<ol style="margin: 0.5rem 0; padding-left: 1.6rem; line-height: 1.8;">\n`;
+          inList = true;
+          listType = 'ol';
+        }
+        html += `<li style="margin-bottom: 0.3rem;">${formatInlineMd(olMatch[2])}</li>\n`;
+        continue;
+      }
+
+      closeList();
+
+      const trimmed = line.trim();
+      if (!trimmed) {
+        html += `<div style="height: 0.45rem;"></div>\n`;
+        continue;
+      }
+
+      html += `<p style="margin: 0.45rem 0; line-height: 1.85;">${formatInlineMd(line)}</p>\n`;
+    }
+
+    closeList();
+    closeBlockquote();
+    return html;
+  }
+
+  function formatInlineMd(text) {
+    let s = escapeHtml(text);
+    // 粗體 **text**
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong style="color: var(--c-ink); font-weight: 700;">$1</strong>');
+    // 斜體 *text*
+    s = s.replace(/\*([^*]+?)\*/g, '<em style="color: var(--text-muted);">$1</em>');
+    // 行內代碼 `code`
+    s = s.replace(/`([^`]+?)`/g, '<code style="background: #edf2f7; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: var(--c-red);">$1</code>');
+    return s;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // --- 16. 提示 Toast ---
   function showToast(msg, type = 'info') {
     const oldToast = document.querySelector('.toast-msg');
     if (oldToast) oldToast.remove();
